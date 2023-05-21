@@ -1,11 +1,13 @@
 import SwiftUI
 import AVFoundation
-
+//need up and down
+//need pause
 struct ContentView: View {
-    @State private var onSeconds = UserDefaults.standard.integer(forKey: "onSeconds") ?? 20
-    @State private var offSeconds = UserDefaults.standard.integer(forKey: "offSeconds") ?? 10
-    @State private var countdownSeconds = UserDefaults.standard.integer(forKey: "countdownSeconds") ?? 30
-    @State private var reps = UserDefaults.standard.integer(forKey: "reps") ?? 20
+    @State private var onSeconds = UserDefaults.standard.integer(forKey: "onSeconds")
+    @State private var offSeconds = UserDefaults.standard.integer(forKey: "offSeconds")
+    @State private var countdownSeconds = UserDefaults.standard.integer(forKey: "countdownSeconds")
+    @State private var reps = UserDefaults.standard.integer(forKey: "reps")
+
     @State private var isVolumeOn = UserDefaults.standard.bool(forKey: "isVolumeOn")
     @State private var isCountingDown = false
     @State private var isWorkingOut = false
