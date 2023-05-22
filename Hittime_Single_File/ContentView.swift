@@ -56,10 +56,14 @@ struct ContentView: View {
                     Alert(title: Text("Done"), dismissButton: .default(Text("OK")))
                 })
             }
+                
+
         }
         .onReceive(timer) { _ in
             self.timerTick()
         }
+        .font(.largeTitle)
+
     }
     
     
