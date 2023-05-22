@@ -14,6 +14,8 @@ struct ContentView: View {
     @State private var isResting = false
     @State private var isWorkoutComplete = false
     @State private var isWorkoutAlertShown = false
+    @State private var isPaused = false // New state variable for pause feature
+
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -30,6 +32,10 @@ struct ContentView: View {
             
             Button(action: { self.startWorkout() }) {
                 Text("Start")
+            }
+            
+            Button(action: { self.isPaused.toggle() }) { // New pause button
+                Text(isPaused ? "Resume" : "Pause")
             }
             
             if isCountingDown {
@@ -55,6 +61,8 @@ struct ContentView: View {
             self.timerTick()
         }
     }
+    
+    
     
     struct NumberInputView: View {
         @Binding var value: Int
@@ -87,6 +95,7 @@ struct ContentView: View {
     }
     
     private func timerTick() {
+        if isPaused { return }
         if isCountingDown {
             if countdownSeconds > 0 {
                 countdownSeconds -= 1
