@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import AVFoundation
 //need up and down
 //need pause
@@ -15,8 +16,8 @@ struct ContentView: View {
     @State private var isWorkoutComplete = false
     @State private var isWorkoutAlertShown = false
     @State private var isPaused = false // New state variable for pause feature
+    @State private var cancellable: AnyCancellable? // Make it an @State property
 
-    
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
@@ -25,19 +26,19 @@ struct ContentView: View {
             NumberInputView(value: $offSeconds, label: "Rest Duration", range: 0...300)
             NumberInputView(value: $countdownSeconds, label: "Countdown", range: 0...300)
             NumberInputView(value: $reps, label: "Repetitions", range: 0...300)
-            
+
             Toggle(isOn: $isVolumeOn) {
                 Text("Sound")
             }
-            
+
             Button(action: { self.startWorkout() }) {
                 Text("Start")
             }
-            
+
             Button(action: { self.isPaused.toggle() }) { // New pause button
                 Text(isPaused ? "Resume" : "Pause")
             }
-            
+
             if isCountingDown {
                 Text("\(countdownSeconds)")
             } else if isWorkingOut {
@@ -45,7 +46,7 @@ struct ContentView: View {
             } else if isResting {
                 Text("Rest: \(offSeconds)")
             }
-            
+
             if isWorkoutComplete {
                 Text("Done").onAppear {
                     isWorkoutAlertShown = true
@@ -56,15 +57,21 @@ struct ContentView: View {
                     Alert(title: Text("Done"), dismissButton: .default(Text("OK")))
                 })
             }
-                
-
         }
-        .onReceive(timer) { _ in
-            self.timerTick()
+        .onAppear {
+            // Start timer when the view appears.
+            self.cancellable = timer
+                .sink { _ in
+                    self.timerTick()
+                }
+        }
+        .onDisappear {
+            // Cancel timer when the view disappears.
+            self.cancellable?.cancel()
         }
         .font(.largeTitle)
-
     }
+
     
     
     
