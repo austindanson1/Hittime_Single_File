@@ -11,6 +11,7 @@ struct NumberField: UIViewRepresentable {
         let textField = UITextField()
         textField.keyboardType = .numberPad
         textField.delegate = context.coordinator
+        textField.textAlignment = .center // Add this line
         return textField
     }
 
@@ -23,6 +24,7 @@ struct NumberField: UIViewRepresentable {
         NumberFieldCoordinator(self)
     }
 }
+
 
 class NumberFieldCoordinator: NSObject, UITextFieldDelegate {
     var parent: NumberField
