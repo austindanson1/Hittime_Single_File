@@ -1,44 +1,142 @@
 import SwiftUI
-import Combine
 import AVFoundation
-//need up and down
-//need pause
-struct ContentView: View {
-    @State private var onSeconds = UserDefaults.standard.integer(forKey: "onSeconds")
-    @State private var offSeconds = UserDefaults.standard.integer(forKey: "offSeconds")
-    @State private var countdownSeconds = UserDefaults.standard.integer(forKey: "countdownSeconds")
-    @State private var reps = UserDefaults.standard.integer(forKey: "reps")
+import Combine
 
+// UIViewRepresentable for UITextField
+struct NumberField: UIViewRepresentable {
+    @Binding var value: Int
+    var placeholder: String
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.keyboardType = .numberPad
+        textField.delegate = context.coordinator
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        uiView.text = String(value)
+        uiView.placeholder = placeholder
+    }
+
+    func makeCoordinator() -> NumberFieldCoordinator {
+        NumberFieldCoordinator(self)
+    }
+}
+
+class NumberFieldCoordinator: NSObject, UITextFieldDelegate {
+    var parent: NumberField
+
+    init(_ parent: NumberField) {
+        self.parent = parent
+    }
+
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        let currentText = textField.text ?? ""
+        guard let stringRange = Range(range, in: currentText) else { return false }
+        let updatedText = currentText.replacingCharacters(in: stringRange, with: string)
+        if let intValue = Int(updatedText) {
+            parent.value = intValue
+            return true
+        } else if updatedText.isEmpty {
+            parent.value = 0
+            return true
+        }
+        return false
+    }
+}
+
+struct WorkoutDurationView: View {
+    @State private var workoutDuration: Int = 0
+    
+    var body: some View {
+        VStack {
+            NumberField(value: $workoutDuration, placeholder: "Workout Duration")
+            NavigationLink(destination: RestDurationView(workoutDuration: workoutDuration)) {
+                Text("Next")
+            }
+        }.padding()
+    }
+}
+
+struct RestDurationView: View {
+    var workoutDuration: Int
+    @State private var restDuration: Int = 0
+    
+    var body: some View {
+        VStack {
+            NumberField(value: $restDuration, placeholder: "Rest Duration")
+            NavigationLink(destination: CountdownView(workoutDuration: workoutDuration, restDuration: restDuration)) {
+                Text("Next")
+            }
+        }.padding()
+    }
+}
+
+struct CountdownView: View {
+    var workoutDuration: Int
+    var restDuration: Int
+    @State private var countdown: Int = 0
+    
+    var body: some View {
+        VStack {
+            NumberField(value: $countdown, placeholder: "Countdown")
+            NavigationLink(destination: RepetitionsView(workoutDuration: workoutDuration, restDuration: restDuration, countdown: countdown)) {
+                Text("Next")
+            }
+        }.padding()
+    }
+}
+
+struct RepetitionsView: View {
+    var workoutDuration: Int
+    var restDuration: Int
+    var countdown: Int
+    @State private var reps: Int = 0
+    
+    var body: some View {
+        VStack {
+            NumberField(value: $reps, placeholder: "Repetitions")
+            NavigationLink(destination: ContentView(onSeconds: workoutDuration, offSeconds: restDuration, countdownSeconds: countdown, reps: reps)) {
+                Text("Start Workout")
+            }
+        }.padding()
+    }
+}
+
+struct ContentView: View {
+    @State var onSeconds: Int
+    @State var offSeconds: Int
+    @State var countdownSeconds: Int
+    @State var reps: Int
+    
+    // State variable for pause feature
     @State private var isVolumeOn = UserDefaults.standard.bool(forKey: "isVolumeOn")
     @State private var isCountingDown = false
     @State private var isWorkingOut = false
     @State private var isResting = false
     @State private var isWorkoutComplete = false
     @State private var isWorkoutAlertShown = false
-    @State private var isPaused = false // New state variable for pause feature
-    @State private var cancellable: AnyCancellable? // Make it an @State property
-
+    @State private var isPaused = false
+    
+    @State private var cancellable: AnyCancellable?
+    
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
         VStack(spacing: 20) {
-            NumberInputView(value: $onSeconds, label: "Workout Duration", range: 0...300)
-            NumberInputView(value: $offSeconds, label: "Rest Duration", range: 0...300)
-            NumberInputView(value: $countdownSeconds, label: "Countdown", range: 0...300)
-            NumberInputView(value: $reps, label: "Repetitions", range: 0...300)
-
             Toggle(isOn: $isVolumeOn) {
                 Text("Sound")
             }
-
+            
             Button(action: { self.startWorkout() }) {
                 Text("Start")
             }
-
+            
             Button(action: { self.isPaused.toggle() }) { // New pause button
                 Text(isPaused ? "Resume" : "Pause")
             }
-
+            
             if isCountingDown {
                 Text("\(countdownSeconds)")
             } else if isWorkingOut {
@@ -46,7 +144,7 @@ struct ContentView: View {
             } else if isResting {
                 Text("Rest: \(offSeconds)")
             }
-
+            
             if isWorkoutComplete {
                 Text("Done").onAppear {
                     isWorkoutAlertShown = true
@@ -69,38 +167,10 @@ struct ContentView: View {
             // Cancel timer when the view disappears.
             self.cancellable?.cancel()
         }
-        .font(.largeTitle)
-    }
-
-    
-    
-    
-    struct NumberInputView: View {
-        @Binding var value: Int
-        let label: String
-        let range: ClosedRange<Int>
-        
-        var body: some View {
-            HStack {
-                Text(label)
-                Spacer()
-                Text("\(value)")
-                    .onTapGesture {
-                        self.value = (self.value + 1) % (self.range.upperBound + 1)
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    }
-            }
-        }
     }
     
     private func startWorkout() {
         if onSeconds > 0 && offSeconds > 0 && reps > 0 {
-            UserDefaults.standard.set(onSeconds, forKey: "onSeconds")
-            UserDefaults.standard.set(offSeconds, forKey: "offSeconds")
-            UserDefaults.standard.set(countdownSeconds, forKey: "countdownSeconds")
-            UserDefaults.standard.set(reps, forKey: "reps")
-            UserDefaults.standard.set(isVolumeOn, forKey: "isVolumeOn")
-
             isCountingDown = true
         }
     }
@@ -128,7 +198,6 @@ struct ContentView: View {
                 if reps > 0 {
                     reps -= 1
                     isResting = true
-                    offSeconds = UserDefaults.standard.integer(forKey: "offSeconds")
                 } else {
                     isWorkoutComplete = true
                 }
@@ -138,38 +207,48 @@ struct ContentView: View {
                 offSeconds -= 1
                 if isVolumeOn && offSeconds <= 3 {
                     beep()
-                }
-            } else {
-                isResting = false
-                if reps > 0 {
-                    isWorkingOut = true
-                    onSeconds = UserDefaults.standard.integer(forKey: "onSeconds")
                 } else {
-                    isWorkoutComplete = true
+                    isResting = false
+                    if reps > 0 {
+                        isWorkingOut = true
+                    } else {
+                        isWorkoutComplete = true
+                    }
                 }
+            } else if isWorkoutComplete {
+                resetWorkout()
             }
-        } else if isWorkoutComplete {
-            resetWorkout()
         }
-    }
-    
-    private func resetWorkout() {
-        onSeconds = UserDefaults.standard.integer(forKey: "onSeconds")
-        offSeconds = UserDefaults.standard.integer(forKey: "offSeconds")
-        countdownSeconds = UserDefaults.standard.integer(forKey: "onSeconds")
-        reps = UserDefaults.standard.integer(forKey: "reps")
-        isWorkoutComplete = false
-    }
-    
-    private func beep() {
-        let systemSoundID: SystemSoundID = 1052
-        AudioServicesPlaySystemSound(systemSoundID)
+        
+         func resetWorkout() {
+            isWorkoutComplete = false
+        }
+        
+         func beep() {
+            let systemSoundID: SystemSoundID = 1052
+            AudioServicesPlaySystemSound(systemSoundID)
+        }
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
+//
+//  Hittime_Single_FileApp.swift
+//  Hittime_Single_File
+//
+//  Created by Austin Danson on 5/20/23.
+//
+
+import SwiftUI
+
+@main
+struct Hittime_Single_FileApp: App {
+    var body: some Scene {
+        WindowGroup {
+            // NavigationView is needed to enable the navigation between views.
+            NavigationView {
+                WorkoutDurationView()
+            }
+        }
     }
 }
 

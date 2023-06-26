@@ -5,13 +5,16 @@
 //  Created by Austin Danson on 5/20/23.
 //
 
-import SwiftUI
-
-@main
-struct Hittime_Single_FileApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
-}
+//import SwiftUI
+//
+//@main
+//struct Hittime_Single_FileApp: App {
+//    var body: some Scene {
+//        WindowGroup {
+//            // NavigationView is needed to enable the navigation between views.
+//            NavigationView {
+//                WorkoutDurationView()
+//            }
+//        }
+//    }
+//}
