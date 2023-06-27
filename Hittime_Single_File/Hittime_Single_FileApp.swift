@@ -18,3 +18,6 @@
 //        }
 //    }
 //}
+//TODO
+//WHITE BUTTON BLACK TEXT FOR BUTTONS
+//TAP ZOERO REMOVES ZERO
