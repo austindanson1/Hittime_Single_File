@@ -205,6 +205,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
+            Spacer()
             if workoutManager.isCountingDown {
                 Text("Countdown: \(workoutManager.countdownSecondsRemaining)")
                     .foregroundColor(.white)
@@ -218,6 +219,10 @@ struct ContentView: View {
                 Text("Workout Complete!")
                     .foregroundColor(.white)
             }
+            Spacer()
+            Text("Reps Remaining: \(workoutManager.repsRemaining)")
+                .foregroundColor(.white)
+                .padding(.bottom, 20) // add some padding to lift it off the very bottom
         }
         .onAppear {
             workoutManager.startWorkout()
@@ -228,6 +233,7 @@ struct ContentView: View {
         .background(Color.black)
     }
 }
+
 
 @main
 struct Hittime_Single_FileApp: App {
