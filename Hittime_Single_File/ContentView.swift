@@ -207,21 +207,18 @@ struct ContentView: View {
         VStack {
             Spacer()
             if workoutManager.isCountingDown {
-                Text("Countdown: \(workoutManager.countdownSecondsRemaining)")
-                    .foregroundColor(.white)
+                BigNumberView(title: "COUNTDOWN", number: workoutManager.countdownSecondsRemaining)
             } else if workoutManager.isWorkoutTime {
-                Text("Workout: \(workoutManager.workoutSecondsRemaining)")
-                    .foregroundColor(.white)
+                BigNumberView(title: "WORKOUT", number: workoutManager.workoutSecondsRemaining)
             } else if workoutManager.isRestTime {
-                Text("Rest: \(workoutManager.restSecondsRemaining)")
-                    .foregroundColor(.white)
+                BigNumberView(title: "REST", number: workoutManager.restSecondsRemaining)
             } else {
                 Text("Workout Complete!")
                     .foregroundColor(.white)
+                    .font(.headline)
             }
             Spacer()
-            Text("Reps Remaining: \(workoutManager.repsRemaining)")
-                .foregroundColor(.white)
+            RepsNumberView(title: "REPS", number: workoutManager.repsRemaining)
                 .padding(.bottom, 20) // add some padding to lift it off the very bottom
         }
         .onAppear {
@@ -233,6 +230,41 @@ struct ContentView: View {
         .background(Color.black)
     }
 }
+
+struct RepsNumberView: View {
+    var title: String
+    var number: Int
+    
+    var body: some View {
+        VStack {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.white)
+            Text("\(number)")
+                .font(.system(size: UIScreen.main.bounds.width * 0.4)) // Adjust this multiplier as needed
+                .foregroundColor(.white)
+        }
+    }
+}
+
+
+
+struct BigNumberView: View {
+    var title: String
+    var number: Int
+    
+    var body: some View {
+        VStack {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.white)
+            Text("\(number)")
+                .font(.system(size: UIScreen.main.bounds.width * 0.69)) // Adjust this multiplier as needed
+                .foregroundColor(.white)
+        }
+    }
+}
+
 
 
 @main
