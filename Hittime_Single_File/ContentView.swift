@@ -74,6 +74,7 @@ class WorkoutManager: ObservableObject {
     @Published var isCountingDown = true
     @Published var isWorkoutTime = false
     @Published var isRestTime = false
+    @Published var isFirstRun = true
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -87,13 +88,13 @@ class WorkoutManager: ObservableObject {
     }
 
     func updateTime() {
-        if self.isCountingDown {
+        if self.isFirstRun {
             if self.countdownSecondsRemaining > 0 {
                 self.countdownSecondsRemaining -= 1
             } else {
+                self.isFirstRun = false
                 self.isCountingDown = false
                 self.isWorkoutTime = true
-                self.workoutSecondsRemaining = self.workoutDuration
             }
         } else if self.isWorkoutTime {
             if self.workoutSecondsRemaining > 0 {
@@ -110,13 +111,15 @@ class WorkoutManager: ObservableObject {
                 self.isRestTime = false
                 self.repsRemaining -= 1
                 if self.repsRemaining > 0 {
-                    self.isCountingDown = true
-                    self.countdownSecondsRemaining = self.countdown
+                    self.isWorkoutTime = true
+                    self.workoutSecondsRemaining = self.workoutDuration
                 }
             }
         }
     }
+
 }
+
 
 struct WorkoutDurationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
