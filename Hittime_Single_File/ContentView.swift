@@ -1,18 +1,33 @@
 import SwiftUI
-import AVFoundation
 import Combine
 
-// Custom Formatter to allow only numbers
 class NumberOnlyFormatter: Formatter {
+    let numberFormatter = NumberFormatter()
+    
+    override init() {
+        super.init()
+        numberFormatter.numberStyle = .decimal
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func string(for obj: Any?) -> String? {
-        return obj as? String
+        if let intVal = obj as? Int {
+            return numberFormatter.string(from: NSNumber(value: intVal))
+        }
+        return nil
     }
-
+    
     override func getObjectValue(_ obj: AutoreleasingUnsafeMutablePointer<AnyObject?>?, for string: String, errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
-        obj?.pointee = Int(string) as AnyObject?
-        return true
+        if let number = numberFormatter.number(from: string) {
+            obj?.pointee = number.intValue as AnyObject?
+            return true
+        }
+        return false
     }
-
+    
     override func isPartialStringValid(_ partialString: String, newEditingString newString: AutoreleasingUnsafeMutablePointer<NSString?>?, errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
         let disallowedCharacterSet = NSCharacterSet(charactersIn: "0123456789").inverted
         let replacementStringIsLegal = partialString.rangeOfCharacter(from: disallowedCharacterSet) == nil
@@ -21,252 +36,203 @@ class NumberOnlyFormatter: Formatter {
 }
 
 struct NumberField: View {
-    @Binding var value: String
+    @Binding var value: Int
     var placeholder: String
+    let formatter = NumberOnlyFormatter()
+    
     var body: some View {
-        TextField(placeholder, value: $value, formatter: NumberOnlyFormatter())
+        TextField(placeholder, value: $value, formatter: formatter)
             .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
             .font(.system(size: UIScreen.main.bounds.width * 0.69)) // Adjust this multiplier as needed
     }
 }
 
-struct WorkoutDurationView: View {
-    @State private var workoutDuration: String = "0"
-    
-    var body: some View {
-        VStack {
-            Text("WORKOUT DURATION")
-                .font(.headline)
-            NumberField(value: $workoutDuration, placeholder: "")
-            NavigationLink(destination: RestDurationView(workoutDuration: Int(workoutDuration) ?? 0)) {
-                Text("NEXT")
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 30)  // Add horizontal padding here
-                    .padding(.vertical, 10)
-                    .background(Color.white)
-                    .cornerRadius(10)
-            }
-            .buttonStyle(PlainButtonStyle())
-        }.padding()
+
+struct NextButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .foregroundColor(.white)
+            .padding(.horizontal, 30)  // Add horizontal padding here
+            .padding(.vertical, 10)
+            .background(Color.black)
+            .cornerRadius(10)
     }
 }
+
+class WorkoutManager: ObservableObject {
+    @Published var workoutDuration: Int = 0
+    @Published var restDuration: Int = 0
+    @Published var countdown: Int = 0
+    @Published var reps: Int = 0
+
+    @Published var countdownSecondsRemaining: Int = 0
+    @Published var workoutSecondsRemaining: Int = 0
+    @Published var restSecondsRemaining: Int = 0
+    @Published var repsRemaining: Int = 0
+    
+    @Published var isCountingDown = true
+    @Published var isWorkoutTime = false
+    @Published var isRestTime = false
+    
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    init() {}
+    
+    func startWorkout() {
+        self.countdownSecondsRemaining = countdown
+        self.workoutSecondsRemaining = workoutDuration
+        self.restSecondsRemaining = restDuration
+        self.repsRemaining = reps
+    }
+
+    func updateTime() {
+        if self.isCountingDown {
+            if self.countdownSecondsRemaining > 0 {
+                self.countdownSecondsRemaining -= 1
+            } else {
+                self.isCountingDown = false
+                self.isWorkoutTime = true
+                self.workoutSecondsRemaining = self.workoutDuration
+            }
+        } else if self.isWorkoutTime {
+            if self.workoutSecondsRemaining > 0 {
+                self.workoutSecondsRemaining -= 1
+            } else {
+                self.isWorkoutTime = false
+                self.isRestTime = true
+                self.restSecondsRemaining = self.restDuration
+            }
+        } else if self.isRestTime {
+            if self.restSecondsRemaining > 0 {
+                self.restSecondsRemaining -= 1
+            } else {
+                self.isRestTime = false
+                self.repsRemaining -= 1
+                if self.repsRemaining > 0 {
+                    self.isCountingDown = true
+                    self.countdownSecondsRemaining = self.countdown
+                }
+            }
+        }
+    }
+}
+
+struct WorkoutDurationView: View {
+    @EnvironmentObject var workoutManager: WorkoutManager
+
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("WORKOUT DURATION")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                NumberField(value: $workoutManager.workoutDuration, placeholder: "")
+                NavigationLink(destination: RestDurationView().environmentObject(workoutManager)) {
+                    Text("NEXT")
+                }
+                .buttonStyle(PlainButtonStyle())
+                .modifier(NextButtonStyle())
+            }.padding()
+            .background(Color.black)
+        }
+    }
+}
+
 struct RestDurationView: View {
-    var workoutDuration: Int
-    @State private var restDuration: String = "0"
+    @EnvironmentObject var workoutManager: WorkoutManager
     
     var body: some View {
         VStack {
             Text("REST DURATION")
                 .font(.headline)
-            NumberField(value: $restDuration, placeholder: "")
-            NavigationLink(destination: CountdownView(workoutDuration: workoutDuration, restDuration: Int(restDuration) ?? 0)) {
+                .foregroundColor(.white)
+            NumberField(value: $workoutManager.restDuration, placeholder: "")
+            NavigationLink(destination: CountdownView().environmentObject(workoutManager)) {
                 Text("NEXT")
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 30)  // Add horizontal padding here
-                    .padding(.vertical, 10)
-                    .background(Color.white)
-                    .cornerRadius(10)
             }
             .buttonStyle(PlainButtonStyle())
+            .modifier(NextButtonStyle())
         }.padding()
+        .background(Color.black)
     }
 }
 
 struct CountdownView: View {
-    var workoutDuration: Int
-    var restDuration: Int
-    @State private var countdown: String = "0"
+    @EnvironmentObject var workoutManager: WorkoutManager
     
     var body: some View {
         VStack {
             Text("COUNTDOWN DURATION")
                 .font(.headline)
-            NumberField(value: $countdown, placeholder: "")
-            NavigationLink(destination: RepetitionsView(workoutDuration: workoutDuration, restDuration: restDuration, countdown: Int(countdown) ?? 0)) {
+                .foregroundColor(.white)
+            NumberField(value: $workoutManager.countdown, placeholder: "")
+            NavigationLink(destination: RepetitionsView().environmentObject(workoutManager)) {
                 Text("NEXT")
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 30)  // Add horizontal padding here
-                    .padding(.vertical, 10)
-                    .background(Color.white)
-                    .cornerRadius(10)
             }
             .buttonStyle(PlainButtonStyle())
+            .modifier(NextButtonStyle())
         }.padding()
+        .background(Color.black)
     }
 }
 
+
 struct RepetitionsView: View {
-    var workoutDuration: Int
-    var restDuration: Int
-    var countdown: Int
-    @State private var reps: String = "0"
+    @EnvironmentObject var workoutManager: WorkoutManager
     
     var body: some View {
         VStack {
             Text("REPS")
                 .font(.headline)
-            NumberField(value: $reps, placeholder: "")
-            NavigationLink(destination: ContentView(onSeconds: workoutDuration, offSeconds: restDuration, countdownSeconds: countdown, reps: Int(reps) ?? 0)) {
+                .foregroundColor(.white)
+            NumberField(value: $workoutManager.reps, placeholder: "")
+            NavigationLink(destination: ContentView().environmentObject(workoutManager)) {
                 Text("START WORKOUT")
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 30)  // Add horizontal padding here
-                    .padding(.vertical, 10)
-                    .background(Color.white)
-                    .cornerRadius(10)
             }
             .buttonStyle(PlainButtonStyle())
+            .modifier(NextButtonStyle())
         }.padding()
+        .background(Color.black)
     }
 }
 
-
 struct ContentView: View {
-    @State var onSeconds: Int
-    @State var offSeconds: Int
-    @State var countdownSeconds: Int
-    @State var reps: Int
-    @State var audioPlayer: AVAudioPlayer?
-
-    @State private var isVolumeOn = UserDefaults.standard.bool(forKey: "isVolumeOn")
-    @State private var isCountingDown = false
-    @State private var isWorkingOut = false
-    @State private var isResting = false
-    @State private var isWorkoutComplete = false
-    @State private var isWorkoutAlertShown = false
-    @State private var isPaused = false
-
-    @State private var cancellable: AnyCancellable?
-
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @EnvironmentObject var workoutManager: WorkoutManager
 
     var body: some View {
-        VStack(spacing: 20) {
-            Toggle(isOn: $isVolumeOn) {
-                Text("Sound")
-            }
-
-            Button(action: { self.startWorkout() }) {
-                Text("Start")
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 30)  // Add horizontal padding here
-                    .padding(.vertical, 10)
-                    .background(Color.white)
-                    .cornerRadius(10)
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            Button(action: { self.isPaused.toggle() }) {
-                Text(isPaused ? "Resume" : "Pause")
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 30)  // Add horizontal padding here
-                    .padding(.vertical, 10)
-                    .background(Color.white)
-                    .cornerRadius(10)
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            if isCountingDown {
-                Text("\(countdownSeconds)")
-            } else if isWorkingOut {
-                Text("Workout: \(onSeconds)")
-            } else if isResting {
-                Text("Rest: \(offSeconds)")
-            }
-
-            if isWorkoutComplete {
-                Text("Done").onAppear {
-                    isWorkoutAlertShown = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                        isWorkoutAlertShown = false
-                    }
-                }.alert(isPresented: $isWorkoutAlertShown, content: {
-                    Alert(title: Text("Done"), dismissButton: .default(Text("OK")))
-                })
+        VStack {
+            if workoutManager.isCountingDown {
+                Text("Countdown: \(workoutManager.countdownSecondsRemaining)")
+                    .foregroundColor(.white)
+            } else if workoutManager.isWorkoutTime {
+                Text("Workout: \(workoutManager.workoutSecondsRemaining)")
+                    .foregroundColor(.white)
+            } else if workoutManager.isRestTime {
+                Text("Rest: \(workoutManager.restSecondsRemaining)")
+                    .foregroundColor(.white)
+            } else {
+                Text("Workout Complete!")
+                    .foregroundColor(.white)
             }
         }
         .onAppear {
-            self.cancellable = timer
-                .sink { _ in
-                    self.timerTick()
-                }
+            workoutManager.startWorkout()
         }
-        .onDisappear {
-            self.cancellable?.cancel()
+        .onReceive(workoutManager.timer) { _ in
+            workoutManager.updateTime()
         }
+        .background(Color.black)
     }
+}
 
-    private func startWorkout() {
-        if onSeconds > 0 && offSeconds > 0 && reps > 0 {
-            isCountingDown = true
-        }
-    }
+@main
+struct Hittime_Single_FileApp: App {
+    var workoutManager = WorkoutManager()
 
-    private func timerTick() {
-        if isPaused { return }
-        if isCountingDown {
-            if countdownSeconds > 0 {
-                countdownSeconds -= 1
-            } else {
-                isCountingDown = false
-                isWorkingOut = true
-                playBeepSound()
-            }
-        } else if isWorkingOut {
-            if onSeconds > 0 {
-                onSeconds -= 1
-            } else {
-                isWorkingOut = false
-                if reps > 0 {
-                    reps -= 1
-                    isResting = true
-                    playBeepSound()
-                } else {
-                    isWorkoutComplete = true
-                }
-            }
-        } else if isResting {
-            if offSeconds > 0 {
-                offSeconds -= 1
-            } else {
-                isResting = false
-                if reps > 0 {
-                    isWorkingOut = true
-                    playBeepSound()
-                } else {
-                    isWorkoutComplete = true
-                }
-            }
-        } else if isWorkoutComplete {
-            resetWorkout()
+    var body: some Scene {
+        WindowGroup {
+            WorkoutDurationView().environmentObject(workoutManager)
         }
     }
-
-    func resetWorkout() {
-        isWorkoutComplete = false
-    }
-
-    func playBeepSound() {
-        guard let url = Bundle.main.url(forResource: "beep", withExtension: "wav") else { return }
-
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer?.play()
-        } catch {
-            print("Unable to load sound file.")
-        }
-    }
-    }
-
-    @main
-    struct Hittime_Single_FileApp: App {
-        var body: some Scene {
-            WindowGroup {
-                NavigationView {
-                    WorkoutDurationView()
-                }
-            }
-        }
-    }
-
-
+}
