@@ -231,6 +231,22 @@ struct ContentView: View {
     }
 }
 
+struct BigNumberView: View {
+    var title: String
+    var number: Int
+    
+    var body: some View {
+        VStack {
+            Text(title)
+                .font(.title)  // Change here
+                .foregroundColor(.white)
+            Text("\(number)")
+                .font(.system(size: UIScreen.main.bounds.width * 0.6)) // Adjust this multiplier as needed
+                .foregroundColor(.white)
+        }
+    }
+}
+
 struct RepsNumberView: View {
     var title: String
     var number: Int
@@ -238,7 +254,7 @@ struct RepsNumberView: View {
     var body: some View {
         VStack {
             Text(title)
-                .font(.headline)
+                .font(.title)  // And here
                 .foregroundColor(.white)
             Text("\(number)")
                 .font(.system(size: UIScreen.main.bounds.width * 0.4)) // Adjust this multiplier as needed
@@ -247,23 +263,6 @@ struct RepsNumberView: View {
     }
 }
 
-
-
-struct BigNumberView: View {
-    var title: String
-    var number: Int
-    
-    var body: some View {
-        VStack {
-            Text(title)
-                .font(.headline)
-                .foregroundColor(.white)
-            Text("\(number)")
-                .font(.system(size: UIScreen.main.bounds.width * 0.69)) // Adjust this multiplier as needed
-                .foregroundColor(.white)
-        }
-    }
-}
 
 
 
