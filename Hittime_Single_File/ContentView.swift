@@ -40,6 +40,7 @@ struct NumberField: View {
     var placeholder: String
     let formatter = NumberOnlyFormatter()
     
+    
     var body: some View {
         TextField(placeholder, value: $value, formatter: formatter)
             .keyboardType(.numberPad)
