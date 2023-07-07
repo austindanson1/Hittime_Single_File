@@ -77,6 +77,8 @@ class WorkoutManager: ObservableObject {
     @Published var isRestTime = false
     @Published var isFirstRun = true
     
+    @Published var isPaused = false
+
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init() {}
@@ -89,6 +91,10 @@ class WorkoutManager: ObservableObject {
     }
 
     func updateTime() {
+        if self.isPaused {
+            return
+        }
+
         if self.isFirstRun {
             if self.countdownSecondsRemaining > 0 {
                 self.countdownSecondsRemaining -= 1
@@ -119,7 +125,11 @@ class WorkoutManager: ObservableObject {
         }
     }
 
+    func togglePause() {
+        self.isPaused.toggle()
+    }
 }
+
 
 
 struct WorkoutDurationView: View {
@@ -221,6 +231,13 @@ struct ContentView: View {
             Spacer()
             RepsNumberView(title: "REPS", number: workoutManager.repsRemaining)
                 .padding(.bottom, 20) // add some padding to lift it off the very bottom
+            Button(action: {
+                workoutManager.togglePause()
+            }) {
+                Text(workoutManager.isPaused ? "Resume" : "Pause")
+                    .modifier(NextButtonStyle())
+            }
+            .padding(.bottom, 20)
         }
         .onAppear {
             workoutManager.startWorkout()
