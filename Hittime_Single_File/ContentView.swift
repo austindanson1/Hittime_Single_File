@@ -243,9 +243,7 @@ struct ContentView: View {
             } else if workoutManager.isRestTime {
                 BigNumberView(title: "REST", number: workoutManager.restSecondsRemaining)
             } else {
-                Text("Workout Complete!")
-                    .foregroundColor(.white)
-                    .font(.headline)
+                BigNumberView(title: "Workout Complete!", number: workoutManager.restSecondsRemaining)
             }
             Spacer()
             RepsNumberView(title: "REPS", number: workoutManager.repsRemaining)
