@@ -53,13 +53,18 @@ struct NumberField: View {
 struct NextButtonStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .foregroundColor(.white)
-            .padding(.horizontal, 30)  // Add horizontal padding here
+            .foregroundColor(.black) // Change text color to black
+            .padding(.horizontal, 30)
             .padding(.vertical, 10)
-            .background(Color.black)
+            .background(Color.white) // Change background color to white
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.black, lineWidth: 2) // Add border here
+            )
     }
 }
+
 
 class WorkoutManager: ObservableObject {
     @Published var workoutDuration: Int = 0
@@ -280,9 +285,6 @@ struct RepsNumberView: View {
         }
     }
 }
-
-
-
 
 @main
 struct Hittime_Single_FileApp: App {
