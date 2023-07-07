@@ -1,5 +1,7 @@
 import SwiftUI
 import Combine
+import AVFoundation
+import AudioToolbox
 
 class NumberOnlyFormatter: Formatter {
     let numberFormatter = NumberFormatter()
@@ -79,13 +81,12 @@ struct NextButtonStyle: ViewModifier {
     }
 }
 
-
 class WorkoutManager: ObservableObject {
     @Published var workoutDuration: Int = 0
     @Published var restDuration: Int = 0
     @Published var countdown: Int = 0
     @Published var reps: Int = 0
-
+    
     @Published var countdownSecondsRemaining: Int = 0
     @Published var workoutSecondsRemaining: Int = 0
     @Published var restSecondsRemaining: Int = 0
@@ -97,10 +98,30 @@ class WorkoutManager: ObservableObject {
     @Published var isFirstRun = true
     
     @Published var isPaused = false
+    @Published var isBeepOn = false
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    var beepPlayer: AVAudioPlayer!
 
-    init() {}
+    init() {
+        if let beepSound = Bundle.main.url(forResource: "beep", withExtension: "mp3") {
+            do {
+                beepPlayer = try AVAudioPlayer(contentsOf: beepSound)
+                beepPlayer.prepareToPlay()
+            } catch {
+                print("Couldn't load beep sound")
+            }
+        }
+        
+        // Configure the audio session
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers, .duckOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to set up audio session: \(error)")
+        }
+    }
+    
     
     func startWorkout() {
         self.countdownSecondsRemaining = countdown
@@ -116,6 +137,9 @@ class WorkoutManager: ObservableObject {
 
         if self.isFirstRun {
             if self.countdownSecondsRemaining > 0 {
+                if countdownSecondsRemaining <= 3 && isBeepOn {
+                    playBeep()
+                }
                 self.countdownSecondsRemaining -= 1
             } else {
                 self.isFirstRun = false
@@ -124,6 +148,9 @@ class WorkoutManager: ObservableObject {
             }
         } else if self.isWorkoutTime {
             if self.workoutSecondsRemaining > 0 {
+                if workoutSecondsRemaining <= 3 && isBeepOn {
+                    playBeep()
+                }
                 self.workoutSecondsRemaining -= 1
             } else {
                 self.isWorkoutTime = false
@@ -132,6 +159,9 @@ class WorkoutManager: ObservableObject {
             }
         } else if self.isRestTime {
             if self.restSecondsRemaining > 0 {
+                if restSecondsRemaining <= 3 && isBeepOn {
+                    playBeep()
+                }
                 self.restSecondsRemaining -= 1
             } else {
                 self.isRestTime = false
@@ -147,6 +177,20 @@ class WorkoutManager: ObservableObject {
     func togglePause() {
         self.isPaused.toggle()
     }
+
+    func toggleBeep() {
+        self.isBeepOn.toggle()
+    }
+
+    func playBeep() {
+        if beepPlayer.isPlaying {
+            beepPlayer.stop()
+            beepPlayer.currentTime = 0
+        }
+        beepPlayer.play()
+        print("Beep sound is playing.") // For debugging purposes
+    }
+
 }
 
 
@@ -230,6 +274,7 @@ struct RepetitionsView: View {
     }
 }
 
+
 struct ContentView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
 
@@ -247,7 +292,15 @@ struct ContentView: View {
             }
             Spacer()
             RepsNumberView(title: "REPS", number: workoutManager.repsRemaining)
-                .padding(.bottom, 20) // add some padding to lift it off the very bottom
+                .padding(.bottom, 20)
+            HStack {
+                Toggle(isOn: $workoutManager.isBeepOn) {
+                    Text("Beep")
+                        .foregroundColor(.white)
+                        .font(.title)
+                }
+            }
+            .padding(.horizontal)
             Button(action: {
                 workoutManager.togglePause()
             }) {
@@ -265,6 +318,8 @@ struct ContentView: View {
         .background(Color.black)
     }
 }
+
+
 
 struct BigNumberView: View {
     var title: String
