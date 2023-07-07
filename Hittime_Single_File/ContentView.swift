@@ -39,15 +39,29 @@ struct NumberField: View {
     @Binding var value: Int
     var placeholder: String
     let formatter = NumberOnlyFormatter()
-    
+
+    @State private var isUserEditing = false
+    @State private var stringValue: String = "0"
     
     var body: some View {
-        TextField(placeholder, value: $value, formatter: formatter)
+        TextField(placeholder, text: $stringValue)
             .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
             .font(.system(size: UIScreen.main.bounds.width * 0.69)) // Adjust this multiplier as needed
+            .onTapGesture {
+                if !isUserEditing {
+                    isUserEditing = true
+                    stringValue = ""
+                }
+            }
+            .onChange(of: stringValue) { newValue in
+                if let intValue = Int(newValue) {
+                    value = intValue
+                }
+            }
     }
 }
+
 
 
 struct NextButtonStyle: ViewModifier {
